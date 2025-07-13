@@ -12,11 +12,11 @@ class KittiSegmentationDataset(Dataset):
         self.images = sorted(os.listdir(image_dir))
         self.masks = sorted(os.listdir(mask_dir))
         self.augment = augment
-        self.target_size = target_size  # (height, width)
+        self.target_size = target_size
         
         # Augmentation transforms
         self.aug = A.Compose([
-                   A.Resize(height=target_size[0], width=target_size[1]),  # Resize first
+                   A.Resize(height=target_size[0], width=target_size[1]),
                    A.HorizontalFlip(p=0.5),
                    A.RandomBrightnessContrast(p=0.3),
                    A.ColorJitter(p=0.3),
@@ -26,9 +26,9 @@ class KittiSegmentationDataset(Dataset):
                    ToTensorV2()
         ])
         
-        # No augmentation transforms (for validation)
+        
         self.no_aug = A.Compose([
-            A.Resize(height=target_size[0], width=target_size[1]),  # Still need to resize
+            A.Resize(height=target_size[0], width=target_size[1]),
             A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
             ToTensorV2()
         ])

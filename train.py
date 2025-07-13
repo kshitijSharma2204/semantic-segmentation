@@ -34,7 +34,7 @@ def train_model():
     batch_size = 12
     
     # Define target size for consistent image dimensions
-    target_size = (256, 512)  # (height, width) - adjust as needed
+    target_size = (256, 512)  # (height, width)
 
     # Load full training dataset
     img_dir = "../data/data_semantics/training/image_2"

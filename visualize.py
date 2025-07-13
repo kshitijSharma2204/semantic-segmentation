@@ -102,4 +102,4 @@ def save_visualization(img, mask, pred_mask=None, id2color=None, save_path="visu
     
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    plt.close()  # Close to free memory
+    plt.close()

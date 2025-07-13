@@ -20,7 +20,6 @@ class TestDataset(Dataset):
         self.target_size = target_size
         self.images = sorted([f for f in os.listdir(image_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))])
         
-        # Same normalization as training, with resize
         self.transform = A.Compose([
             A.Resize(height=target_size[0], width=target_size[1]),
             A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
@@ -38,7 +37,7 @@ class TestDataset(Dataset):
         transformed = self.transform(image=image)
         image = transformed['image']
         
-        return image, self.images[idx]  # Return image and filename
+        return image, self.images[idx]
 
 def semantic_segmentation_inference(checkpoint_path, image_dir, output_dir="segmentation_results"):
     """
@@ -233,7 +232,7 @@ if __name__ == "__main__":
     print("=== Running Semantic Segmentation ===")
     semantic_segmentation_inference(checkpoint_path, test_image_dir)
     
-    # Optional: Create overlay visualizations
+    # Create overlay visualizations
     print("\n=== Creating Overlay Visualizations ===")
     create_overlay_visualization(checkpoint_path, test_image_dir)
     
