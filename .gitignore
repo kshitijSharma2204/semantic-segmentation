@@ -1,0 +1,6 @@
+checkpoints/
+overlay_results/
+plots/
+segmentation_results/
+video_gif.py
+__pycache__/
