@@ -62,7 +62,7 @@ The run:
 - command: `EPOCHS=600 bash run_v2.sh`, which runs `python train.py --run-name v2 --epochs 600`
 - split: `splits/train.txt` (160 images) for training, `splits/val.txt` for validation
 - 600 epochs in 4 h 33 min on an RTX 3060 Laptop GPU (6 GB): 26.3 s per epoch on average, 4.2 s per validation pass
-- output: `outputs/v2/` (checkpoints, log.csv, curves.png). The GPU stayed under 67 °C the whole time.
+- output: `outputs/v2/` (checkpoints, log.csv, curves.png)
 
 ![v2 training curves](../results/v2/training_curves.png)
 
