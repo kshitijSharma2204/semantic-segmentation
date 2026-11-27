@@ -1,0 +1,7 @@
+torch==2.7.1
+numpy==2.2.6
+albumentations==2.0.8
+opencv-python-headless==4.12.0.88
+pillow==11.3.0
+matplotlib==3.10.3
+tqdm==4.67.1
