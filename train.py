@@ -6,12 +6,8 @@ from model import UNet
 from kitti_dataset import KittiSegmentationDataset
 from tqdm import tqdm
 from torch.utils.data import random_split
-
-import sys
-# repo root, so data/ and outputs/ resolve no matter where this is run from
-ROOT = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(ROOT)
-from data.devkit_semantics.devkit.helpers.labels import labels
+import argparse
+from config import load_labels, add_common_args
 
 
 def compute_iou(preds, labels, n_classes):
@@ -29,18 +25,19 @@ def compute_iou(preds, labels, n_classes):
             ious.append(intersection / max(union, 1))
     return np.nanmean(ious)
 
-def train_model():
+def train_model(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    labels = load_labels(args.data_root)
     id2color = {label.id: label.color for label in labels if label.id >= 0}
     n_classes = len([label for label in labels if label.id >= 0])
-    batch_size = 12
+    batch_size = args.batch_size
     
     # Define target size for consistent image dimensions
-    target_size = (256, 512)  # (height, width)
+    target_size = (args.height, args.width)
 
     # Load full training dataset
-    img_dir = os.path.join(ROOT, "data/data_semantics/training/image_2")
-    mask_dir = os.path.join(ROOT, "data/data_semantics/training/semantic")
+    img_dir = os.path.join(args.data_root, "data_semantics/training/image_2")
+    mask_dir = os.path.join(args.data_root, "data_semantics/training/semantic")
     full_dataset = KittiSegmentationDataset(img_dir, mask_dir, augment=False, target_size=target_size)
     
     # Split into train and validation (80/20 split)
@@ -48,7 +45,7 @@ def train_model():
     val_size = len(full_dataset) - train_size
     
     # Use random_split for reproducible splits
-    torch.manual_seed(42)  # For reproducibility
+    torch.manual_seed(args.seed)  # For reproducibility
     train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
     
     # Create augmented training dataset
@@ -59,22 +56,22 @@ def train_model():
     train_subset = torch.utils.data.Subset(train_set_augmented, train_indices)
     
     # Create data loaders
-    train_loader = torch.utils.data.DataLoader(train_subset, batch_size=batch_size, shuffle=True, num_workers=8)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
+    train_loader = torch.utils.data.DataLoader(train_subset, batch_size=batch_size, shuffle=True, num_workers=args.num_workers)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=args.num_workers)
 
     print(f"Training samples: {len(train_subset)}")
     print(f"Validation samples: {len(val_dataset)}")
 
     model = UNet(n_classes=n_classes).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     criterion = torch.nn.CrossEntropyLoss(ignore_index=255)
-    n_epochs = 500
+    n_epochs = args.epochs
 
     train_losses, val_losses, val_ious = [], [], []
 
-    # new runs go to outputs/train so they never overwrite outputs/v1
-    ckpt_dir = os.path.join(ROOT, "outputs/train/checkpoints")
-    plot_dir = os.path.join(ROOT, "outputs/train/plots")
+    # new runs go to outputs/train by default so they never overwrite outputs/v1
+    ckpt_dir = os.path.join(args.out_root, args.run_name, "checkpoints")
+    plot_dir = os.path.join(args.out_root, args.run_name, "plots")
     os.makedirs(ckpt_dir, exist_ok=True)
     os.makedirs(plot_dir, exist_ok=True)
 
@@ -125,5 +122,17 @@ def train_model():
             plt.close()
     print("Training Complete!")
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train the UNet on KITTI semantics")
+    add_common_args(parser)
+    parser.add_argument("--run-name", default="train", help="output goes to <out-root>/<run-name>/")
+    parser.add_argument("--height", type=int, default=256)
+    parser.add_argument("--width", type=int, default=512)
+    parser.add_argument("--batch-size", type=int, default=12)
+    parser.add_argument("--epochs", type=int, default=500)
+    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--num-workers", type=int, default=8)
+    return parser.parse_args()
+
 if __name__ == '__main__':
-    train_model()
+    train_model(parse_args())

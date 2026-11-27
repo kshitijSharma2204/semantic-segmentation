@@ -12,10 +12,8 @@ import glob
 
 # Import your existing model and other dependencies
 from model import UNet
-import sys
-ROOT = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(ROOT)
-from data.devkit_semantics.devkit.helpers.labels import labels
+from config import ROOT, load_labels
+labels = load_labels(os.path.join(ROOT, "data"))
 
 class FrameSequenceDataset(Dataset):
     """Dataset for loading frame sequences from directory"""
