@@ -5,11 +5,12 @@ from PIL import Image
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from torch.utils.data import Dataset, DataLoader
-from model import UNet
+from evaluate import load_model, MODEL_TYPES
 
 from config import ROOT, load_labels
 labels = load_labels(os.path.join(ROOT, "data"))
-from visualize import save_visualization
+from visualize import save_visualization, class_colors
+import argparse
 import matplotlib.pyplot as plt
 
 class TestDataset(Dataset):
@@ -38,28 +39,23 @@ class TestDataset(Dataset):
         
         return image, self.images[idx]
 
-def semantic_segmentation_inference(checkpoint_path, image_dir, output_dir="segmentation_results"):
+def semantic_segmentation_inference(checkpoint_path, image_dir, output_dir="segmentation_results", model_type=None):
     """
     Run semantic segmentation on RGB images without ground truth masks
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    id2color = {label.id: label.color for label in labels if label.id >= 0}
-    n_classes = len([label for label in labels if label.id >= 0])
+    model, model_type, size = load_model(checkpoint_path, device, model_type)
+    id2color = class_colors(labels, model_type)
     
     print(f"Running semantic segmentation on images in: {image_dir}")
     print(f"Device: {device}")
-    print(f"Number of classes: {n_classes}")
+    print(f"Model type: {model_type}, input {size[0]}x{size[1]}")
     
     # Create dataset and loader
-    dataset = TestDataset(image_dir)
+    dataset = TestDataset(image_dir, target_size=size)
     loader = DataLoader(dataset, batch_size=1, shuffle=False)
     
     print(f"Found {len(dataset)} images for segmentation")
-    
-    # Load model
-    model = UNet(n_classes=n_classes).to(device)
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
-    model.eval()
     
     print(f"Loaded model from {checkpoint_path}")
     
@@ -162,20 +158,16 @@ def save_colored_mask(pred_mask, id2color, save_path):
     
     Image.fromarray(pred_color).save(save_path)
 
-def create_overlay_visualization(checkpoint_path, image_dir, output_dir="overlay_results", alpha=0.6):
+def create_overlay_visualization(checkpoint_path, image_dir, output_dir="overlay_results", alpha=0.6, model_type=None):
     """
     Create overlay visualizations (original image + transparent segmentation)
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    id2color = {label.id: label.color for label in labels if label.id >= 0}
-    n_classes = len([label for label in labels if label.id >= 0])
+    model, model_type, size = load_model(checkpoint_path, device, model_type)
+    id2color = class_colors(labels, model_type)
     
-    dataset = TestDataset(image_dir)
+    dataset = TestDataset(image_dir, target_size=size)
     loader = DataLoader(dataset, batch_size=1, shuffle=False)
-    
-    model = UNet(n_classes=n_classes).to(device)
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
-    model.eval()
     
     os.makedirs(output_dir, exist_ok=True)
     
@@ -223,19 +215,25 @@ def create_overlay_visualization(checkpoint_path, image_dir, output_dir="overlay
 
 # Usage
 if __name__ == "__main__":
-    # Configuration
-    checkpoint_path = os.path.join(ROOT, 'outputs/v1/checkpoints/unet_epoch500.pt')
-    test_image_dir = os.path.join(ROOT, "data/data_semantics/testing/image_2")
-    out_dir = os.path.join(ROOT, "outputs/v1")
+    parser = argparse.ArgumentParser(description="Run a checkpoint on the KITTI test images")
+    parser.add_argument("--checkpoint", default=os.path.join(ROOT, 'outputs/v1/checkpoints/unet_epoch500.pt'))
+    parser.add_argument("--model-type", choices=list(MODEL_TYPES), default=None,
+                        help="default: read it from the checkpoint")
+    parser.add_argument("--image-dir", default=os.path.join(ROOT, "data/data_semantics/testing/image_2"))
+    parser.add_argument("--out-dir", default=os.path.join(ROOT, "outputs/inference"),
+                        help="outputs/v1 holds the first run's results, so this doesn't default to it")
+    args = parser.parse_args()
 
     # Run semantic segmentation
     print("=== Running Semantic Segmentation ===")
-    semantic_segmentation_inference(checkpoint_path, test_image_dir,
-                                    output_dir=os.path.join(out_dir, "segmentation_results"))
+    semantic_segmentation_inference(args.checkpoint, args.image_dir,
+                                    output_dir=os.path.join(args.out_dir, "segmentation_results"),
+                                    model_type=args.model_type)
 
     # Create overlay visualizations
     print("\n=== Creating Overlay Visualizations ===")
-    create_overlay_visualization(checkpoint_path, test_image_dir,
-                                 output_dir=os.path.join(out_dir, "overlay_results"))
+    create_overlay_visualization(args.checkpoint, args.image_dir,
+                                 output_dir=os.path.join(args.out_dir, "overlay_results"),
+                                 model_type=args.model_type)
     
     print("\nAll done! Check the output folders for results.")

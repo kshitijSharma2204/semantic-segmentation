@@ -11,8 +11,10 @@ import re
 import glob
 
 # Import your existing model and other dependencies
-from model import UNet
+from evaluate import load_model, MODEL_TYPES
 from config import ROOT, load_labels
+from visualize import class_colors
+import argparse
 labels = load_labels(os.path.join(ROOT, "data"))
 
 class FrameSequenceDataset(Dataset):
@@ -89,26 +91,21 @@ def load_frames_from_sequence(frame_dir):
     return frames
 
 def process_frame_sequence(checkpoint_path, frame_dir, output_dir="sequence_results", 
-                         batch_size=8, fps=30):
+                         batch_size=8, fps=30, model_type=None):
     """
     Process frame sequence and create video outputs
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    id2color = {label.id: label.color for label in labels if label.id >= 0}
-    n_classes = len([label for label in labels if label.id >= 0])
+    model, model_type, size = load_model(checkpoint_path, device, model_type)
+    id2color = class_colors(labels, model_type)
     
     print(f"Processing frame sequence from: {frame_dir}")
     print(f"Device: {device}")
-    print(f"Number of classes: {n_classes}")
+    print(f"Model type: {model_type}, input {size[0]}x{size[1]}")
     
     # Create dataset and loader
-    dataset = FrameSequenceDataset(frame_dir)
+    dataset = FrameSequenceDataset(frame_dir, target_size=size)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
-    
-    # Load model
-    model = UNet(n_classes=n_classes).to(device)
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
-    model.eval()
     
     print(f"Loaded model from {checkpoint_path}")
     
@@ -307,21 +304,16 @@ def save_frames_as_gif(frames, output_path, fps, max_frames=None, resize_factor=
     print(f"GIF saved: {output_path}")
 
 def process_streaming_sequence(checkpoint_path, frame_dir, output_video_path, 
-                             output_gif_path, fps=30, batch_size=1):
+                             output_gif_path, fps=30, batch_size=1, model_type=None):
     """
     Memory-efficient streaming processing of frame sequence
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    id2color = {label.id: label.color for label in labels if label.id >= 0}
-    n_classes = len([label for label in labels if label.id >= 0])
-    
-    # Load model
-    model = UNet(n_classes=n_classes).to(device)
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
-    model.eval()
+    model, model_type, size = load_model(checkpoint_path, device, model_type)
+    id2color = class_colors(labels, model_type)
     
     # Get sorted frame paths
-    dataset = FrameSequenceDataset(frame_dir)
+    dataset = FrameSequenceDataset(frame_dir, target_size=size)
     
     # Setup video writer
     first_frame = cv2.imread(dataset.frame_paths[0])
@@ -382,29 +374,39 @@ def process_streaming_sequence(checkpoint_path, frame_dir, output_video_path,
 
 # Usage
 if __name__ == "__main__":
-    # Configuration
-    checkpoint_path = os.path.join(ROOT, 'outputs/v1/checkpoints/unet_epoch500.pt')
-    frame_directory = os.path.join(ROOT, 'data/raw/2011_09_26/2011_09_26_drive_0018_sync/image_02/data')
-    out_dir = os.path.join(ROOT, 'outputs/v1')
+    parser = argparse.ArgumentParser(description="Run a checkpoint on a raw KITTI drive and write videos and GIFs")
+    parser.add_argument("--checkpoint", default=os.path.join(ROOT, 'outputs/v1/checkpoints/unet_epoch500.pt'))
+    parser.add_argument("--model-type", choices=list(MODEL_TYPES), default=None,
+                        help="default: read it from the checkpoint")
+    parser.add_argument("--frame-dir",
+                        default=os.path.join(ROOT, 'data/raw/2011_09_26/2011_09_26_drive_0018_sync/image_02/data'))
+    parser.add_argument("--batch-size", type=int, default=2,
+                        help="8 fits for the 256x512 v1 model, 352x1184 v2 needs 2 on a 6 GB GPU")
+    parser.add_argument("--out-dir", default=os.path.join(ROOT, 'outputs/video_inference'),
+                        help="outputs/v1 holds the first run's results, so this doesn't default to it")
+    args = parser.parse_args()
+    os.makedirs(args.out_dir, exist_ok=True)
 
     # Method 1: Full processing (creates multiple outputs)
     print("=== Full Frame Sequence Processing ===")
     process_frame_sequence(
-        checkpoint_path,
-        frame_directory,
-        output_dir=os.path.join(out_dir, "frame_sequence_results"),
-        batch_size=8,
-        fps=30
+        args.checkpoint,
+        args.frame_dir,
+        output_dir=os.path.join(args.out_dir, "frame_sequence_results"),
+        batch_size=args.batch_size,
+        fps=30,
+        model_type=args.model_type
     )
     
     # Method 2: Streaming processing (memory efficient, single output)
     print("\n=== Streaming Processing ===")
     process_streaming_sequence(
-        checkpoint_path,
-        frame_directory,
-        output_video_path=os.path.join(out_dir, "streaming_result.mp4"),
-        output_gif_path=os.path.join(out_dir, "streaming_result.gif"),
-        fps=30
+        args.checkpoint,
+        args.frame_dir,
+        output_video_path=os.path.join(args.out_dir, "streaming_result.mp4"),
+        output_gif_path=os.path.join(args.out_dir, "streaming_result.gif"),
+        fps=30,
+        model_type=args.model_type
     )
     
     print("\nAll processing complete!")
