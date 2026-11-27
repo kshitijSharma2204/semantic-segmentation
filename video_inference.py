@@ -13,7 +13,8 @@ import glob
 # Import your existing model and other dependencies
 from model import UNet
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(ROOT)
 from data.devkit_semantics.devkit.helpers.labels import labels
 
 class FrameSequenceDataset(Dataset):
@@ -384,15 +385,16 @@ def process_streaming_sequence(checkpoint_path, frame_dir, output_video_path,
 # Usage
 if __name__ == "__main__":
     # Configuration
-    checkpoint_path = 'checkpoints/unet_epoch500.pt'
-    frame_directory = '../2011_09_26_drive_0018_sync/2011_09_26/2011_09_26_drive_0018_sync/image_02/data'
-    
+    checkpoint_path = os.path.join(ROOT, 'outputs/v1/checkpoints/unet_epoch500.pt')
+    frame_directory = os.path.join(ROOT, 'data/raw/2011_09_26/2011_09_26_drive_0018_sync/image_02/data')
+    out_dir = os.path.join(ROOT, 'outputs/v1')
+
     # Method 1: Full processing (creates multiple outputs)
     print("=== Full Frame Sequence Processing ===")
     process_frame_sequence(
-        checkpoint_path, 
-        frame_directory, 
-        output_dir="frame_sequence_results",
+        checkpoint_path,
+        frame_directory,
+        output_dir=os.path.join(out_dir, "frame_sequence_results"),
         batch_size=8,
         fps=30
     )
@@ -402,8 +404,8 @@ if __name__ == "__main__":
     process_streaming_sequence(
         checkpoint_path,
         frame_directory,
-        output_video_path="streaming_result.mp4",
-        output_gif_path="streaming_result.gif",
+        output_video_path=os.path.join(out_dir, "streaming_result.mp4"),
+        output_gif_path=os.path.join(out_dir, "streaming_result.gif"),
         fps=30
     )
     

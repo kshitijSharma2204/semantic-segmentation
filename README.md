@@ -44,7 +44,7 @@ pip install tqdm
 ### Dataset Setup
 
   1. Download the KITTI semantic segmentation dataset
-  2. Extract to the following structure:
+  2. Extract it into `data/` in the repo root, like this:
      ```text
      data/
       ├── data_semantics/
@@ -53,8 +53,12 @@ pip install tqdm
       │   │   └── semantic/       # Ground truth masks
       │   └── testing/
       │       └── image_2/        # Test images
-      └── devkit_semantics/       # KITTI devkit with label definitions
+      ├── devkit_semantics/       # KITTI devkit with label definitions
+      └── raw/
+          └── 2011_09_26/2011_09_26_drive_0018_sync/   # raw drive, only needed for video_inference.py
      ```
+
+`data/` and `outputs/` are git-ignored. Checkpoints, plots and inference results from my first training run are in `outputs/v1/`. A new `python train.py` run writes to `outputs/train/`, so it doesn't overwrite them.
 
 ## Usage
 

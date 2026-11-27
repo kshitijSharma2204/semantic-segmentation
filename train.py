@@ -8,7 +8,9 @@ from tqdm import tqdm
 from torch.utils.data import random_split
 
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# repo root, so data/ and outputs/ resolve no matter where this is run from
+ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(ROOT)
 from data.devkit_semantics.devkit.helpers.labels import labels
 
 
@@ -37,8 +39,8 @@ def train_model():
     target_size = (256, 512)  # (height, width)
 
     # Load full training dataset
-    img_dir = "../data/data_semantics/training/image_2"
-    mask_dir = "../data/data_semantics/training/semantic"
+    img_dir = os.path.join(ROOT, "data/data_semantics/training/image_2")
+    mask_dir = os.path.join(ROOT, "data/data_semantics/training/semantic")
     full_dataset = KittiSegmentationDataset(img_dir, mask_dir, augment=False, target_size=target_size)
     
     # Split into train and validation (80/20 split)
@@ -70,8 +72,11 @@ def train_model():
 
     train_losses, val_losses, val_ious = [], [], []
 
-    os.makedirs('checkpoints', exist_ok=True)
-    os.makedirs('plots', exist_ok=True)
+    # new runs go to outputs/train so they never overwrite outputs/v1
+    ckpt_dir = os.path.join(ROOT, "outputs/train/checkpoints")
+    plot_dir = os.path.join(ROOT, "outputs/train/plots")
+    os.makedirs(ckpt_dir, exist_ok=True)
+    os.makedirs(plot_dir, exist_ok=True)
 
     for epoch in range(1, n_epochs+1):
         model.train()
@@ -108,7 +113,7 @@ def train_model():
 
         # Checkpointing
         if epoch % 10 == 0 or epoch == n_epochs:
-            torch.save(model.state_dict(), f'checkpoints/unet_epoch{epoch}.pt')
+            torch.save(model.state_dict(), os.path.join(ckpt_dir, f'unet_epoch{epoch}.pt'))
             # Save plot
             plt.figure(figsize=(10,5))
             plt.plot(train_losses, label="Train Loss")
@@ -116,7 +121,7 @@ def train_model():
             plt.plot(val_ious, label="Val mIoU")
             plt.legend()
             plt.title("Losses and mIoU")
-            plt.savefig(f'plots/training_plot_epoch{epoch}.png')
+            plt.savefig(os.path.join(plot_dir, f'training_plot_epoch{epoch}.png'))
             plt.close()
     print("Training Complete!")
 
