@@ -1,7 +1,19 @@
-checkpoints/
-overlay_results/
-plots/
-segmentation_results/
-frame_sequence_results/
-video_gif.py
+# Python
 __pycache__/
+*.pyc
+semantic_segmentation_venv/
+.venv/
+
+# KITTI data and raw drives, downloaded separately (see README)
+data/
+
+# Checkpoints, plots and other generated output
+outputs/
+streaming_result.mp4
+streaming_result.gif
+
+# Local helper I don't publish
+video_gif.py
+
+# Notes for the coding agent
+docs/plan.md

@@ -8,7 +8,8 @@ from torch.utils.data import Dataset, DataLoader
 from model import UNet
 
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(ROOT)
 from data.devkit_semantics.devkit.helpers.labels import labels
 from visualize import save_visualization
 import matplotlib.pyplot as plt
@@ -225,15 +226,18 @@ def create_overlay_visualization(checkpoint_path, image_dir, output_dir="overlay
 # Usage
 if __name__ == "__main__":
     # Configuration
-    checkpoint_path = 'checkpoints/unet_epoch500.pt'
-    test_image_dir = "../data/data_semantics/testing/image_2"
-    
+    checkpoint_path = os.path.join(ROOT, 'outputs/v1/checkpoints/unet_epoch500.pt')
+    test_image_dir = os.path.join(ROOT, "data/data_semantics/testing/image_2")
+    out_dir = os.path.join(ROOT, "outputs/v1")
+
     # Run semantic segmentation
     print("=== Running Semantic Segmentation ===")
-    semantic_segmentation_inference(checkpoint_path, test_image_dir)
-    
+    semantic_segmentation_inference(checkpoint_path, test_image_dir,
+                                    output_dir=os.path.join(out_dir, "segmentation_results"))
+
     # Create overlay visualizations
     print("\n=== Creating Overlay Visualizations ===")
-    create_overlay_visualization(checkpoint_path, test_image_dir)
+    create_overlay_visualization(checkpoint_path, test_image_dir,
+                                 output_dir=os.path.join(out_dir, "overlay_results"))
     
     print("\nAll done! Check the output folders for results.")
