@@ -216,7 +216,8 @@ def train_model(args):
         history.append(row)
         save(os.path.join(ckpt_dir, "last.pt"), epoch)
         write_log(history, os.path.join(run_dir, "log.csv"))
-        save_curves(history, os.path.join(run_dir, "curves.png"))
+        if "val_miou" in row:
+            save_curves(history, os.path.join(run_dir, "curves.png"))
 
         msg = f"epoch {epoch}: train loss {row['train_loss']:.4f}, lr {row['lr']}, {row['epoch_s']:.1f}s"
         if "val_miou" in row:
