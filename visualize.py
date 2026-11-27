@@ -2,6 +2,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+def class_colors(labels, model_type):
+    """Colour for each predicted class: label IDs for the 34-class v1 model, trainIds for v2."""
+    if model_type == "labelid34":
+        return {label.id: label.color for label in labels if label.id >= 0}
+    # trainId 255 (ignore) stays black; when several labels share a trainId the first one wins, as in the devkit
+    colors = {}
+    for label in labels:
+        if 0 <= label.trainId < 255 and label.trainId not in colors:
+            colors[label.trainId] = label.color
+    return colors
+
 def denormalize(tensor):
     """
     Denormalize tensor that was normalized with ImageNet statistics

@@ -1,81 +1,49 @@
 # KITTI Semantic Segmentation with UNet
 
-A PyTorch implementation of semantic segmentation on the KITTI dataset using a UNet architecture. This project provides end-to-end training and inference capabilities for autonomous driving scene understanding.
+A UNet trained from scratch on the KITTI semantic segmentation set, predicting the 19 Cityscapes classes.
 
-## Features
-
- - UNet Architecture - Custom with skip connections
- - KITTI Dataset Utils
- - Data Augmentation
- - Efficient Training
+<img src="results/v2/drive_0018_overlay.gif" alt="v2 model on KITTI raw drive 0018" width="620"/>
 
 ## Results
 
- - Side by side segmented visualization
- - Overlay Visualization with transparency
- - Training Progress Video
+mIoU over 19 classes on 40 held-out images from the KITTI training set.
 
-### Segmentation Inference Results
+| run | epoch | mIoU | pixel acc |
+|---|---|---|---|
+| v1 | 500 | 0.364 | 0.867 |
+| v2 | 600 | 0.400 | 0.884 |
+| v2 (best val) | 500 | 0.405 | 0.884 |
 
-#### Side by side visualization
-<img src="results/vis_000079_10_result.png" alt="Segmentation Result 1" width="800"/>
-<img src="results/data_comparison.gif" alt="Segmentation Result 2" width="800"/>
+v1: 34 label IDs, 256x512. v2: 19 classes, 352x1184 with random crops, AdamW + poly LR. Per-class IoU and the exact commands are in [docs/RESULTS.md](docs/RESULTS.md).
 
-#### Overlay Results
-<img src="results/000079_10_overlay.png" alt="Segmentation Result 3" width="800"/>
-<img src="results/data_overlay.gif" alt="Segmentation Result 4" width="800"/>
+<img src="results/v2/val_median.png" alt="input, ground truth and prediction for the median val image" width="800"/>
 
-#### Training Progress
-<img src="results/training_progress.gif" alt="Segmentation Result 5" width="800"/>
-
-## Installation
-
-### Requirements
+## Setup
 
 ```bash
-pip install torch torchvision
-pip install albumentations
-pip install matplotlib
-pip install numpy
-pip install Pillow
-pip install tqdm
+pip install -r requirements.txt
 ```
 
-### Dataset Setup
+Put the KITTI data in `data/`:
 
-  1. Download the KITTI semantic segmentation dataset
-  2. Extract it into `data/` in the repo root, like this:
-     ```text
-     data/
-      ├── data_semantics/
-      │   ├── training/
-      │   │   ├── image_2/        # RGB images
-      │   │   └── semantic/       # Ground truth masks
-      │   └── testing/
-      │       └── image_2/        # Test images
-      ├── devkit_semantics/       # KITTI devkit with label definitions
-      └── raw/
-          └── 2011_09_26/2011_09_26_drive_0018_sync/   # raw drive, only needed for video_inference.py
-     ```
-
-`data/` and `outputs/` are git-ignored. Checkpoints, plots and inference results from my first training run are in `outputs/v1/`. A new `python train.py` run writes to `outputs/train/`, so it doesn't overwrite them.
+```text
+data/
+ ├── data_semantics/{training,testing}/
+ ├── devkit_semantics/
+ └── raw/2011_09_26/2011_09_26_drive_0018_sync/   # only for video_inference.py and the GIF
+```
 
 ## Usage
 
-### Training
-
 ```bash
-python train.py
+EPOCHS=600 bash run_v2.sh                       # tests, v1 re-score, train, eval, media
+python train.py --run-name v2 --epochs 600      # or resume with --resume outputs/v2/checkpoints/last.pt
+python evaluate.py outputs/v2/checkpoints/best.pt --out-dir outputs/v2/eval
+python inference.py --checkpoint outputs/v2/checkpoints/best.pt
+python -m unittest discover -s tests
 ```
 
-### Inference
+## Limitations
 
-```bash
-python inference.py
-```
-
-## Acknowledgments
-
-  - KITTI dataset creators for providing the benchmark
-  - PyTorch team for the deep learning framework
-  - Albumentations library for data augmentation tools
+- Only 40 val images, taken from the KITTI training set. No test-server score.
+- Trained from scratch on 160 images, so people, riders and bicycles are mostly wrong.
