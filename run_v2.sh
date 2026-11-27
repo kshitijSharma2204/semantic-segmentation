@@ -74,8 +74,8 @@ stage_train() {
 }
 
 stage_eval() {
-    banner "scoring outputs/v2/checkpoints/best.pt with the Phase 1 protocol"
-    $PY evaluate.py outputs/v2/checkpoints/best.pt --out-dir outputs/v2/eval 2>&1 | log eval
+    banner "scoring the v2 best.pt and last.pt with the Phase 1 protocol"
+    $PY evaluate.py outputs/v2/checkpoints/best.pt outputs/v2/checkpoints/last.pt --out-dir outputs/v2/eval 2>&1 | log eval
     mkdir -p results/v2
     cp outputs/v2/eval/best_classes.csv results/v2/best_classes.csv
 }

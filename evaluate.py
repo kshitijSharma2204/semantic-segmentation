@@ -149,8 +149,12 @@ def write_report(result, class_names, json_path, csv_path):
 
 
 def epoch_of(path):
+    """v1 checkpoints have the epoch in the file name, v2 ones (best.pt, last.pt) store it."""
     m = re.search(r"epoch(\d+)", os.path.basename(path))
-    return int(m.group(1)) if m else None
+    if m:
+        return int(m.group(1))
+    ckpt = torch.load(path, map_location="cpu", weights_only=True)
+    return ckpt.get("epoch") if "model" in ckpt else None
 
 
 def main():
@@ -173,7 +177,8 @@ def main():
     commit = git_commit()
     os.makedirs(args.out_dir, exist_ok=True)
 
-    ckpts = sorted(args.checkpoints, key=lambda p: (epoch_of(p) is None, epoch_of(p) or 0, p))
+    epochs = {p: epoch_of(p) for p in args.checkpoints}
+    ckpts = sorted(args.checkpoints, key=lambda p: (epochs[p] is None, epochs[p] or 0, p))
     summary = []
     for path in tqdm(ckpts, desc="checkpoints", disable=len(ckpts) == 1):
         model, model_type, size = load_model(path, device, args.model_type)
@@ -194,7 +199,7 @@ def main():
         stem = os.path.splitext(os.path.basename(path))[0]
         write_report(result, class_names, os.path.join(args.out_dir, f"{stem}.json"),
                      os.path.join(args.out_dir, f"{stem}_classes.csv"))
-        summary.append([result["checkpoint"], epoch_of(path), result["miou"], result["pixel_acc"],
+        summary.append([result["checkpoint"], epochs[path], result["miou"], result["pixel_acc"],
                         result["old_batch_miou"], result["n_classes_averaged"]])
         tqdm.write(f"{stem}: mIoU {result['miou']:.4f} over {result['n_classes_averaged']} classes, "
                    f"pixel acc {result['pixel_acc']:.4f}, old per-batch metric {result['old_batch_miou']:.4f}")
