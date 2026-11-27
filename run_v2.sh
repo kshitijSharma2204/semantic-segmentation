@@ -8,12 +8,12 @@
 #
 # Stages: tests rescore bench resume-check train eval media
 # Run it inside tmux (tmux new -s v2) so the training survives a closed terminal.
-# EPOCHS=300 and EXTRA="--bf16" etc. can be set from the environment.
+# EPOCHS=600 and EXTRA="--schedule cosine" etc. can be set from the environment.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 PY=${PY:-semantic_segmentation_venv/bin/python}
-EPOCHS=${EPOCHS:-300}
+EPOCHS=${EPOCHS:-600}
 EXTRA=${EXTRA:-}
 mkdir -p outputs/logs
 
